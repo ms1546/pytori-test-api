@@ -39,7 +39,7 @@ docker compose up -d
 
 ### 4. テーブルとテストデータの作成
 
-node createTable.js && node setup-test.js
+node utils/createTable.js && node utils/setup-test.js
 
 ✅ 「テーブルとテストデータを作成しました」と表示されれば成功！
 
