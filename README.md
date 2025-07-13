@@ -12,17 +12,16 @@ DynamoDB Local、AWS SAM CLI を使用して、ローカルで完全再現でき
 - AWS SAM CLI（※Rosettaターミナルでインストールする）
   https://docs.aws.amazon.com/serverless-application-model/latest/developerguide/install-sam-cli.html
 
-💡 Apple Silicon (M1/M2/M3) ユーザーへ
-Rosetta ターミナルを使って `sam local start-api` を実行、APIサーバを起動してください
+💡 Apple Silicon (M1/M2/M3) ユーザーへ  
+***Rosetta ターミナルを使って `sam local start-api` を実行、APIサーバを起動してください***  
 参考:
 https://qiita.com/funatsufumiya/items/cec08f1ba3387edc2eed
+
 ---
 
 ## 🚀 起動手順
 
 ### 1. このディレクトリに移動
-
-cd <pytori-test-api>
 
 ---
 
@@ -63,10 +62,10 @@ DOCKER_HOST=unix:///Users/$USER/.docker/run/docker.sock sam build   # 変更時�
 DOCKER_HOST=unix:///Users/$USER/.docker/run/docker.sock sam local start-api
 ```
 
+```
 起動成功時：
-
 Mounting RepoSummaryFunction at http://127.0.0.1:3000/repo-summary [GET]
-
+```
 ---
 
 ## 🧪 テストAPI呼び出し
