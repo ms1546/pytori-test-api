@@ -1,12 +1,12 @@
-AWSTemplateFormatVersion: '2010-09-09'
-Transform: AWS::Serverless-2016-10-31
 Resources:
   RepoSummaryFunction:
     Type: AWS::Serverless::Function
     Properties:
-      Handler: app.handler
-      Runtime: nodejs18.x
-      CodeUri: .
+      Timeout: 10
+      PackageType: Zip
+      Runtime: go1.x
+      Handler: bootstrap
+      CodeUri: cmd/repo-summary/
       Events:
         GetSummary:
           Type: Api
@@ -15,4 +15,4 @@ Resources:
             Method: get
       Environment:
         Variables:
-          DYNAMO_ENDPOINT: http://dynamodb-local:8000
+          DYNAMO_ENDPOINT: http://host.docker.internal:8000
