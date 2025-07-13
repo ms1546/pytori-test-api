@@ -73,7 +73,7 @@ Mounting RepoSummaryFunction at http://127.0.0.1:3000/repo-summary [GET]
 ※  Docker コンテナから ホストマシンのネットワークにアクセスする際の名前解決のため、初回のみ時間がかかる
 ### 単一リポジトリを取得：
 ```bash
-curl "http://localhost:3000/repo-summary?repository_id=101" | jq .
+curl "http://localhost:3000/repo-summary?repository_id=102" | jq .
 ```
 
 ### 全リポジトリを取得：
@@ -84,21 +84,35 @@ curl "http://localhost:3000/repo-summary" | jq .
 ---
 
 ### ✅ 単一リポジトリのレスポンス例：
-
-{
-  "repository_id": 101,
-  "repository_name": "team-a",
-  "status": 1,
-  "shiritori_count": 1,
-  "current_word": "ぬいぐるみ",
-  "review_comment": "ちょーすごい",
-  "merged_on": "2025-07-10T15:20:00Z"
-}
+ ``` bash
+[
+  {
+    "repository_id": 102,
+    "repository_name": "team-b",
+    "status": 1,
+    "shiritori_count": 2,
+    "commits": [
+      {
+        "current_word": "list",
+        "review_comment": "ナイス!!",
+        "merged_on": "2025-07-12T11:45:00Z"
+      },
+      {
+        "current_word": "eval",
+        "review_comment": "ナイスコミット！",
+        "merged_on": "2025-07-11T11:45:00Z"
+      }
+    ]
+  },
+  ...
+]
+```
 
 ---
 
 ### ✅ 全リポジトリのレスポンス例：
 
+```bash
 [
   {
     "repository_id": 101,
@@ -111,6 +125,7 @@ curl "http://localhost:3000/repo-summary" | jq .
   },
   ...
 ]
+```
 
 ---
 

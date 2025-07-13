@@ -18,14 +18,18 @@ import (
 
 var client *ddb.Client
 
+type Commit struct {
+	CurrentWord   string `json:"current_word"`
+	ReviewComment string `json:"review_comment"`
+	MergedOn      string `json:"merged_on"`
+}
+
 type RepoSummary struct {
-	RepositoryID   int    `json:"repository_id"`
-	RepositoryName string `json:"repository_name"`
-	Status         int    `json:"status"`
-	ShiritoriCount int    `json:"shiritori_count"`
-	CurrentWord    string `json:"current_word"`
-	ReviewComment  string `json:"review_comment"`
-	MergedOn       string `json:"merged_on"`
+	RepositoryID   int      `json:"repository_id"`
+	RepositoryName string   `json:"repository_name"`
+	Status         int      `json:"status"`
+	ShiritoriCount int      `json:"shiritori_count"`
+	Commits        []Commit `json:"commits"`
 }
 
 func getString(attr types.AttributeValue) string {
@@ -62,19 +66,22 @@ func getRepoSummary(ctx context.Context, repoId int, repoItem map[string]types.A
 	sort.Slice(out.Items, func(i, j int) bool {
 		return getString(out.Items[i]["merged_on"]) > getString(out.Items[j]["merged_on"])
 	})
-	latest := map[string]types.AttributeValue{}
-	if len(out.Items) > 0 {
-		latest = out.Items[0]
+
+	var commits []Commit
+	for _, item := range out.Items {
+		commits = append(commits, Commit{
+			CurrentWord:   getString(item["current_word"]),
+			ReviewComment: getString(item["review_comment"]),
+			MergedOn:      getString(item["merged_on"]),
+		})
 	}
 
 	return &RepoSummary{
 		RepositoryID:   repoId,
 		RepositoryName: repoName,
 		Status:         status,
-		ShiritoriCount: len(out.Items),
-		CurrentWord:    getString(latest["current_word"]),
-		ReviewComment:  getString(latest["review_comment"]),
-		MergedOn:       getString(latest["merged_on"]),
+		ShiritoriCount: len(commits),
+		Commits:        commits,
 	}, nil
 }
 
@@ -110,6 +117,7 @@ func handler(ctx context.Context, req events.APIGatewayProxyRequest) (events.API
 		}, nil
 	}
 
+	// クエリなし：全取得
 	allRepos, err := client.Scan(ctx, &ddb.ScanInput{
 		TableName: aws.String("pytori_repos"),
 	})
