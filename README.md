@@ -9,11 +9,11 @@ DynamoDB Local、AWS SAM CLI を使用して、ローカルで完全再現でき
 
 - Docker Desktop：https://www.docker.com/products/docker-desktop/
 - Node.js：https://nodejs.org/
-- AWS SAM CLI（Rosettaターミナルでインストール推奨）
+- AWS SAM CLI（※Rosettaターミナルでインストールする）
   https://docs.aws.amazon.com/serverless-application-model/latest/developerguide/install-sam-cli.html
 
 💡 Apple Silicon (M1/M2/M3) ユーザーへ
-Rosetta ターミナルを使って `sam local start-api` を実行してください。
+Rosetta ターミナルを使って `sam local start-api` を実行、APIサーバを起動してください
 
 ---
 
@@ -47,9 +47,9 @@ node utils/createTable.js && node utils/setup-test.js
 
 ---
 
-### 5. SAM API のローカル起動（Rosettaターミナル）
+### 5. SAM API のローカル起動（※Rosettaターミナルで実施する）
 
-sam local start-api
+DOCKER_HOST=unix:///Users/$USER/.docker/run/docker.sock sam local start-api
 
 起動成功時：
 
