@@ -41,7 +41,9 @@ docker compose up -d
 
 node utils/createTable.js && node utils/setup-test.js
 
-✅ 「テーブルとテストデータを作成しました」と表示されれば成功！
+✅ game_commits を作成しました
+✅ game_repos を作成しました
+✅ テストデータを投入しました
 
 ---
 
