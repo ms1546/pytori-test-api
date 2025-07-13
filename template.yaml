@@ -6,6 +6,7 @@ Resources:
     Properties:
       Handler: app.handler
       Runtime: nodejs18.x
+      CodeUri: .
       Events:
         GetSummary:
           Type: Api
@@ -14,4 +15,4 @@ Resources:
             Method: get
       Environment:
         Variables:
-          DYNAMO_ENDPOINT: http://host.docker.internal:8000
+          DYNAMO_ENDPOINT: http://dynamodb-local:8000

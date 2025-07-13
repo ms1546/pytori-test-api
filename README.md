@@ -14,7 +14,8 @@ DynamoDB Local、AWS SAM CLI を使用して、ローカルで完全再現でき
 
 💡 Apple Silicon (M1/M2/M3) ユーザーへ
 Rosetta ターミナルを使って `sam local start-api` を実行、APIサーバを起動してください
-
+参考:
+https://qiita.com/funatsufumiya/items/cec08f1ba3387edc2eed
 ---
 
 ## 🚀 起動手順
@@ -35,6 +36,8 @@ npm i
 
 docker compose up -d
 
+（落とす時 docker compose down -v )
+
 ---
 
 ### 4. テーブルとテストデータの作成
@@ -48,7 +51,7 @@ node utils/createTable.js && node utils/setup-test.js
 ---
 
 ### 5. SAM API のローカル起動（※Rosettaターミナルで実施する）
-
+(cd pytori-test-api)
 DOCKER_HOST=unix:///Users/$USER/.docker/run/docker.sock sam local start-api
 
 起動成功時：
