@@ -55,8 +55,14 @@ source .env && go run ./scripts/setup.go
 ✅ テストデータを投入しました
 
 ---
+### 5. AWSにログインしてDockerからpublic ECRのイメージ取得
+```bash
+aws ecr-public get-login-password --region us-east-1 \
+  | docker login --username AWS --password-stdin public.ecr.aws
+```
 
-### 5. SAM API のローカル起動（※Rosettaターミナルで実施する）
+---
+### 6. SAM API のローカル起動（※Rosettaターミナルで実施する）
 ```bash
 (cd pytori-test-api)
 DOCKER_HOST=unix:///Users/$USER/.docker/run/docker.sock sam build   # 変更時は毎回
