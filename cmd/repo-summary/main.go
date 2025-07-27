@@ -18,18 +18,11 @@ import (
 
 var client *ddb.Client
 
-type Commit struct {
-	CurrentWord   string `json:"current_word"`
-	ReviewComment string `json:"review_comment"`
-	MergedOn      string `json:"merged_on"`
-}
-
 type RepoSummary struct {
-	RepositoryID   int      `json:"repository_id"`
-	RepositoryName string   `json:"repository_name"`
-	Status         int      `json:"status"`
-	ShiritoriCount int      `json:"shiritori_count"`
-	Commits        []Commit `json:"commits"`
+	RepositoryName string `json:"repository_name"`
+	Status         int    `json:"status"`
+	CurrentWord    string `json:"current_word"`
+	MergedOn       string `json:"merged_on"`
 }
 
 func getString(attr types.AttributeValue) string {
@@ -47,100 +40,83 @@ func getInt(attr types.AttributeValue) int {
 	return 0
 }
 
-func getRepoSummary(ctx context.Context, repoId int, repoItem map[string]types.AttributeValue) (*RepoSummary, error) {
-	repoName := getString(repoItem["name"])
-	status := getInt(repoItem["status"])
-
-	out, err := client.Scan(ctx, &ddb.ScanInput{
-		TableName:        aws.String("pytori_commits"),
-		FilterExpression: aws.String("repository_id = :repo_id AND is_merged = :merged"),
-		ExpressionAttributeValues: map[string]types.AttributeValue{
-			":repo_id": &types.AttributeValueMemberN{Value: strconv.Itoa(repoId)},
-			":merged":  &types.AttributeValueMemberN{Value: "1"},
-		},
-	})
-	if err != nil {
-		return nil, err
-	}
-
-	sort.Slice(out.Items, func(i, j int) bool {
-		return getString(out.Items[i]["merged_on"]) > getString(out.Items[j]["merged_on"])
-	})
-
-	var commits []Commit
-	for _, item := range out.Items {
-		commits = append(commits, Commit{
-			CurrentWord:   getString(item["current_word"]),
-			ReviewComment: getString(item["review_comment"]),
-			MergedOn:      getString(item["merged_on"]),
-		})
-	}
-
-	return &RepoSummary{
-		RepositoryID:   repoId,
-		RepositoryName: repoName,
-		Status:         status,
-		ShiritoriCount: len(commits),
-		Commits:        commits,
-	}, nil
-}
-
 func handler(ctx context.Context, req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
-	repoIdParam := req.QueryStringParameters["repository_id"]
+	repoName := req.QueryStringParameters["repository_name"]
+	var summaries []RepoSummary
 
-	if repoIdParam != "" {
-		repoId, _ := strconv.Atoi(repoIdParam)
+	if repoName != "" {
 		repo, err := client.GetItem(ctx, &ddb.GetItemInput{
 			TableName: aws.String("pytori_repos"),
 			Key: map[string]types.AttributeValue{
-				"id": &types.AttributeValueMemberN{Value: strconv.Itoa(repoId)},
+				"name": &types.AttributeValueMemberS{Value: repoName},
 			},
 		})
 		if err != nil || repo.Item == nil {
-			return events.APIGatewayProxyResponse{
-				StatusCode: 404,
-				Body:       `{"error":"Repository not found"}`,
-			}, nil
+			return events.APIGatewayProxyResponse{StatusCode: 404, Body: `{"error":"Repository not found"}`}, nil
 		}
+		status := getInt(repo.Item["status"])
 
-		summary, err := getRepoSummary(ctx, repoId, repo.Item)
+		out, err := client.Query(ctx, &ddb.QueryInput{
+			TableName:              aws.String("pytori_shiritori"),
+			KeyConditionExpression: aws.String("repository_name = :name"),
+			ExpressionAttributeValues: map[string]types.AttributeValue{
+				":name": &types.AttributeValueMemberS{Value: repoName},
+			},
+		})
 		if err != nil {
-			return events.APIGatewayProxyResponse{
-				StatusCode: 500,
-				Body:       `{"error":"Failed to get summary"}`,
-			}, nil
+			return events.APIGatewayProxyResponse{StatusCode: 500, Body: `{"error":"Failed to query"}`}, nil
 		}
-		body, _ := json.Marshal(summary)
-		return events.APIGatewayProxyResponse{
-			StatusCode: 200,
-			Body:       string(body),
-		}, nil
+
+		sort.Slice(out.Items, func(i, j int) bool {
+			return getString(out.Items[i]["merged_on"]) > getString(out.Items[j]["merged_on"])
+		})
+
+		for _, item := range out.Items {
+			summaries = append(summaries, RepoSummary{
+				RepositoryName: repoName,
+				Status:         status,
+				CurrentWord:    getString(item["current_word"]),
+				MergedOn:       getString(item["merged_on"]),
+			})
+		}
+	} else {
+		allRepos, err := client.Scan(ctx, &ddb.ScanInput{TableName: aws.String("pytori_repos")})
+		if err != nil {
+			return events.APIGatewayProxyResponse{StatusCode: 500, Body: `{"error":"Failed to scan repos"}`}, nil
+		}
+
+		for _, repo := range allRepos.Items {
+			repoName := getString(repo["name"])
+			status := getInt(repo["status"])
+
+			out, err := client.Query(ctx, &ddb.QueryInput{
+				TableName:              aws.String("pytori_shiritori"),
+				KeyConditionExpression: aws.String("repository_name = :name"),
+				ExpressionAttributeValues: map[string]types.AttributeValue{
+					":name": &types.AttributeValueMemberS{Value: repoName},
+				},
+			})
+			if err != nil {
+				continue
+			}
+
+			sort.Slice(out.Items, func(i, j int) bool {
+				return getString(out.Items[i]["merged_on"]) > getString(out.Items[j]["merged_on"])
+			})
+
+			for _, item := range out.Items {
+				summaries = append(summaries, RepoSummary{
+					RepositoryName: repoName,
+					Status:         status,
+					CurrentWord:    getString(item["current_word"]),
+					MergedOn:       getString(item["merged_on"]),
+				})
+			}
+		}
 	}
 
-	// クエリなし：全取得
-	allRepos, err := client.Scan(ctx, &ddb.ScanInput{
-		TableName: aws.String("pytori_repos"),
-	})
-	if err != nil {
-		return events.APIGatewayProxyResponse{
-			StatusCode: 500,
-			Body:       `{"error":"Failed to get repositories"}`,
-		}, nil
-	}
-
-	var summaries []RepoSummary
-	for _, item := range allRepos.Items {
-		repoId := getInt(item["id"])
-		summary, err := getRepoSummary(ctx, repoId, item)
-		if err == nil {
-			summaries = append(summaries, *summary)
-		}
-	}
 	body, _ := json.Marshal(summaries)
-	return events.APIGatewayProxyResponse{
-		StatusCode: 200,
-		Body:       string(body),
-	}, nil
+	return events.APIGatewayProxyResponse{StatusCode: 200, Body: string(body)}, nil
 }
 
 func main() {
@@ -164,6 +140,5 @@ func main() {
 		log.Fatalf("Failed to load config: %v", err)
 	}
 	client = ddb.NewFromConfig(cfg)
-
 	lambda.Start(handler)
 }

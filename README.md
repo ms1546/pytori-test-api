@@ -12,8 +12,8 @@ DynamoDB Local、AWS SAM CLI を使用して、ローカルで完全再現でき
 - AWS SAM CLI（※Rosettaターミナルでインストールする）
   https://docs.aws.amazon.com/serverless-application-model/latest/developerguide/install-sam-cli.html
 
-💡 Apple Silicon (M1/M2/M3) ユーザーへ  
-***Rosetta ターミナルを使って `sam local start-api` を実行、APIサーバを起動してください***  
+💡 Apple Silicon (M1/M2/M3) ユーザーへ
+***Rosetta ターミナルを使って `sam local start-api` を実行、APIサーバを起動してください***
 参考:
 https://qiita.com/funatsufumiya/items/cec08f1ba3387edc2eed
 
@@ -47,7 +47,7 @@ docker compose up -d
 source .env && go run ./scripts/setup.go
 ```
 
-✅ pytori_commits を作成しました
+✅ pytori_shiritori を作成しました
 
 ✅ pytori_repos を作成しました
 
@@ -78,7 +78,7 @@ Mounting RepoSummaryFunction at http://127.0.0.1:3000/repo-summary [GET]
 ※  Docker コンテナから ホストマシンのネットワークにアクセスする際の名前解決のため、初回のみ時間がかかる
 ### 単一リポジトリを取得：
 ```bash
-curl "http://localhost:3000/repo-summary?repository_id=102" | jq .
+curl "http://localhost:3000/repo-summary?repository_name=team-b" | jq .
 ```
 
 ### 全リポジトリを取得：
@@ -89,27 +89,20 @@ curl "http://localhost:3000/repo-summary" | jq .
 ---
 
 ### ✅ 単一リポジトリのレスポンス例：
- ``` bash
+ ```bash
 [
   {
-    "repository_id": 102,
     "repository_name": "team-b",
     "status": 1,
-    "shiritori_count": 2,
-    "commits": [
-      {
-        "current_word": "list",
-        "review_comment": "ナイス!!",
-        "merged_on": "2025-07-12T11:45:00Z"
-      },
-      {
-        "current_word": "eval",
-        "review_comment": "ナイスコミット！",
-        "merged_on": "2025-07-11T11:45:00Z"
-      }
-    ]
+    "current_word": "list",
+    "merged_on": "2025-07-12T11:45:00Z"
   },
-  ...
+  {
+    "repository_name": "team-b",
+    "status": 1,
+    "current_word": "eval",
+    "merged_on": "2025-07-11T11:45:00Z"
+  }
 ]
 ```
 
@@ -120,15 +113,23 @@ curl "http://localhost:3000/repo-summary" | jq .
 ```bash
 [
   {
-    "repository_id": 101,
+    "repository_name": "team-b",
+    "status": 1,
+    "current_word": "list",
+    "merged_on": "2025-07-12T11:45:00Z"
+  },
+  {
+    "repository_name": "team-b",
+    "status": 1,
+    "current_word": "eval",
+    "merged_on": "2025-07-11T11:45:00Z"
+  },
+  {
     "repository_name": "team-a",
     "status": 1,
-    "shiritori_count": 1,
-    "current_word": "ぬいぐるみ",
-    "review_comment": "ちょーすごい",
+    "current_word": "def",
     "merged_on": "2025-07-10T15:20:00Z"
-  },
-  ...
+  }
 ]
 ```
 
