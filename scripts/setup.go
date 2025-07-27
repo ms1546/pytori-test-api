@@ -33,13 +33,18 @@ func main() {
 
 	client := ddb.NewFromConfig(cfg)
 
+	deleteTableIfExists(ctx, client, "pytori_shiritori")
+	deleteTableIfExists(ctx, client, "pytori_repos")
+
 	createTableIfNotExists(ctx, client, &ddb.CreateTableInput{
-		TableName: aws.String("pytori_commits"),
+		TableName: aws.String("pytori_shiritori"),
 		KeySchema: []types.KeySchemaElement{
-			{AttributeName: aws.String("id"), KeyType: types.KeyTypeHash},
+			{AttributeName: aws.String("repository_name"), KeyType: types.KeyTypeHash},
+			{AttributeName: aws.String("merged_on"), KeyType: types.KeyTypeRange},
 		},
 		AttributeDefinitions: []types.AttributeDefinition{
-			{AttributeName: aws.String("id"), AttributeType: types.ScalarAttributeTypeN},
+			{AttributeName: aws.String("repository_name"), AttributeType: types.ScalarAttributeTypeS},
+			{AttributeName: aws.String("merged_on"), AttributeType: types.ScalarAttributeTypeS},
 		},
 		ProvisionedThroughput: &types.ProvisionedThroughput{
 			ReadCapacityUnits:  aws.Int64(5),
@@ -50,10 +55,10 @@ func main() {
 	createTableIfNotExists(ctx, client, &ddb.CreateTableInput{
 		TableName: aws.String("pytori_repos"),
 		KeySchema: []types.KeySchemaElement{
-			{AttributeName: aws.String("id"), KeyType: types.KeyTypeHash},
+			{AttributeName: aws.String("name"), KeyType: types.KeyTypeHash},
 		},
 		AttributeDefinitions: []types.AttributeDefinition{
-			{AttributeName: aws.String("id"), AttributeType: types.ScalarAttributeTypeN},
+			{AttributeName: aws.String("name"), AttributeType: types.ScalarAttributeTypeS},
 		},
 		ProvisionedThroughput: &types.ProvisionedThroughput{
 			ReadCapacityUnits:  aws.Int64(5),
@@ -62,6 +67,15 @@ func main() {
 	})
 
 	putTestData(ctx, client)
+}
+
+func deleteTableIfExists(ctx context.Context, client *ddb.Client, name string) {
+	_, err := client.DeleteTable(ctx, &ddb.DeleteTableInput{
+		TableName: aws.String(name),
+	})
+	if err == nil {
+		fmt.Printf("🗑️ %s を削除しました\n", name)
+	}
 }
 
 func createTableIfNotExists(ctx context.Context, client *ddb.Client, input *ddb.CreateTableInput) {
@@ -86,29 +100,14 @@ func createTableIfNotExists(ctx context.Context, client *ddb.Client, input *ddb.
 
 func putTestData(ctx context.Context, client *ddb.Client) {
 	repos := []map[string]types.AttributeValue{
-		{"id": &types.AttributeValueMemberN{Value: "101"}, "name": &types.AttributeValueMemberS{Value: "team-a"}, "status": &types.AttributeValueMemberN{Value: "1"}},
-		{"id": &types.AttributeValueMemberN{Value: "102"}, "name": &types.AttributeValueMemberS{Value: "team-b"}, "status": &types.AttributeValueMemberN{Value: "1"}},
+		{"name": &types.AttributeValueMemberS{Value: "team-a"}, "status": &types.AttributeValueMemberN{Value: "1"}},
+		{"name": &types.AttributeValueMemberS{Value: "team-b"}, "status": &types.AttributeValueMemberN{Value: "1"}},
 	}
 
-	commits := []map[string]types.AttributeValue{
-		{
-			"id": &types.AttributeValueMemberN{Value: "1"}, "repository_id": &types.AttributeValueMemberN{Value: "101"},
-			"review_comment": &types.AttributeValueMemberS{Value: "ちょーすごい"}, "current_word": &types.AttributeValueMemberS{Value: "def"},
-			"theme": &types.AttributeValueMemberS{Value: "春"}, "is_merged": &types.AttributeValueMemberN{Value: "1"},
-			"merged_on": &types.AttributeValueMemberS{Value: "2025-07-10T15:20:00Z"},
-		},
-		{
-			"id": &types.AttributeValueMemberN{Value: "2"}, "repository_id": &types.AttributeValueMemberN{Value: "102"},
-			"review_comment": &types.AttributeValueMemberS{Value: "ナイスコミット！"}, "current_word": &types.AttributeValueMemberS{Value: "eval"},
-			"theme": &types.AttributeValueMemberS{Value: "おやつ"}, "is_merged": &types.AttributeValueMemberN{Value: "1"},
-			"merged_on": &types.AttributeValueMemberS{Value: "2025-07-11T11:45:00Z"},
-		},
-		{
-			"id": &types.AttributeValueMemberN{Value: "3"}, "repository_id": &types.AttributeValueMemberN{Value: "102"},
-			"review_comment": &types.AttributeValueMemberS{Value: "ナイス!!"}, "current_word": &types.AttributeValueMemberS{Value: "list"},
-			"theme": &types.AttributeValueMemberS{Value: "冬"}, "is_merged": &types.AttributeValueMemberN{Value: "1"},
-			"merged_on": &types.AttributeValueMemberS{Value: "2025-07-12T11:45:00Z"},
-		},
+	shiritori := []map[string]types.AttributeValue{
+		{"repository_name": &types.AttributeValueMemberS{Value: "team-a"}, "current_word": &types.AttributeValueMemberS{Value: "def"}, "merged_on": &types.AttributeValueMemberS{Value: "2025-07-10T15:20:00Z"}},
+		{"repository_name": &types.AttributeValueMemberS{Value: "team-b"}, "current_word": &types.AttributeValueMemberS{Value: "eval"}, "merged_on": &types.AttributeValueMemberS{Value: "2025-07-11T11:45:00Z"}},
+		{"repository_name": &types.AttributeValueMemberS{Value: "team-b"}, "current_word": &types.AttributeValueMemberS{Value: "list"}, "merged_on": &types.AttributeValueMemberS{Value: "2025-07-12T11:45:00Z"}},
 	}
 
 	for _, item := range repos {
@@ -121,13 +120,13 @@ func putTestData(ctx context.Context, client *ddb.Client) {
 		}
 	}
 
-	for _, item := range commits {
+	for _, item := range shiritori {
 		_, err := client.PutItem(ctx, &ddb.PutItemInput{
-			TableName: aws.String("pytori_commits"),
+			TableName: aws.String("pytori_shiritori"),
 			Item:      item,
 		})
 		if err != nil {
-			log.Printf("❌ Insert commit failed: %v", err)
+			log.Printf("❌ Insert shiritori failed: %v", err)
 		}
 	}
 	fmt.Println("✅ テストデータを投入しました")
