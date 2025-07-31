@@ -19,8 +19,8 @@ jobs:
 
       - name: Build Go binary for Lambda
         run: |
-          GOOS=linux GOARCH=amd64 go build -o bootstrap cmd/repo-summary/main.go
-          zip function.zip bootstrap
+          GOOS=linux GOARCH=amd64 go build -o main cmd/repo-summary/main.go
+          zip function.zip main
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v2
