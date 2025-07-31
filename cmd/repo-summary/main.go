@@ -120,25 +120,27 @@ func handler(ctx context.Context, req events.APIGatewayProxyRequest) (events.API
 }
 
 func main() {
+	ctx := context.TODO()
+	var cfg aws.Config
+	var err error
+
 	endpoint := os.Getenv("DYNAMO_ENDPOINT")
-	if endpoint == "" {
-		log.Fatal("DYNAMO_ENDPOINT is not set")
+	if endpoint != "" {
+		cfg, err = config.LoadDefaultConfig(ctx,
+			config.WithRegion("ap-northeast-1"),
+			config.WithEndpointResolver(aws.EndpointResolverFunc(
+				func(service, region string) (aws.Endpoint, error) {
+					return aws.Endpoint{URL: endpoint, HostnameImmutable: true}, nil
+				})),
+		)
+	} else {
+		cfg, err = config.LoadDefaultConfig(ctx, config.WithRegion("ap-northeast-1"))
 	}
 
-	cfg, err := config.LoadDefaultConfig(context.TODO(),
-		config.WithRegion("ap-northeast-1"),
-		config.WithEndpointResolver(
-			aws.EndpointResolverFunc(func(service, region string) (aws.Endpoint, error) {
-				return aws.Endpoint{
-					URL:               endpoint,
-					HostnameImmutable: true,
-				}, nil
-			}),
-		),
-	)
 	if err != nil {
 		log.Fatalf("Failed to load config: %v", err)
 	}
+
 	client = ddb.NewFromConfig(cfg)
 	lambda.Start(handler)
 }
