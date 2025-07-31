@@ -58,6 +58,7 @@ func handler(ctx context.Context, req events.APIGatewayProxyRequest) (events.API
 
 		out, err := client.Query(ctx, &ddb.QueryInput{
 			TableName:              aws.String("ShiritoriMergedWords"),
+			IndexName:              aws.String("repository_name-index"),
 			KeyConditionExpression: aws.String("repository_name = :name"),
 			ExpressionAttributeValues: map[string]types.AttributeValue{
 				":name": &types.AttributeValueMemberS{Value: repoName},
@@ -91,6 +92,7 @@ func handler(ctx context.Context, req events.APIGatewayProxyRequest) (events.API
 
 			out, err := client.Query(ctx, &ddb.QueryInput{
 				TableName:              aws.String("ShiritoriMergedWords"),
+				IndexName:              aws.String("repository_name-index"),
 				KeyConditionExpression: aws.String("repository_name = :name"),
 				ExpressionAttributeValues: map[string]types.AttributeValue{
 					":name": &types.AttributeValueMemberS{Value: repoName},
