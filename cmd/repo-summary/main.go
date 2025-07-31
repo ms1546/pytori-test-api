@@ -7,6 +7,7 @@ import (
 	"os"
 	"sort"
 	"strconv"
+	"strings"
 
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-lambda-go/lambda"
@@ -41,7 +42,7 @@ func getInt(attr types.AttributeValue) int {
 }
 
 func handler(ctx context.Context, req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
-	repoName := req.QueryStringParameters["repository_name"]
+	repoName := strings.TrimSpace(req.QueryStringParameters["repository_name"])
 	var summaries []RepoSummary
 
 	if repoName != "" {
@@ -52,20 +53,29 @@ func handler(ctx context.Context, req events.APIGatewayProxyRequest) (events.API
 			},
 		})
 		if err != nil || repo.Item == nil {
-			return events.APIGatewayProxyResponse{StatusCode: 404, Body: `{"error":"Repository not found"}`}, nil
+			return events.APIGatewayProxyResponse{
+				StatusCode: 404,
+				Body:       `{"error":"Repository not found"}`,
+			}, nil
 		}
 		status := getInt(repo.Item["status"])
 
 		out, err := client.Query(ctx, &ddb.QueryInput{
 			TableName:              aws.String("ShiritoriMergedWords"),
 			IndexName:              aws.String("repository_name-index"),
-			KeyConditionExpression: aws.String("repository_name = :name"),
+			KeyConditionExpression: aws.String("#rname = :name"),
+			ExpressionAttributeNames: map[string]string{
+				"#rname": "repository_name",
+			},
 			ExpressionAttributeValues: map[string]types.AttributeValue{
 				":name": &types.AttributeValueMemberS{Value: repoName},
 			},
 		})
 		if err != nil {
-			return events.APIGatewayProxyResponse{StatusCode: 500, Body: `{"error":"Failed to query"}`}, nil
+			return events.APIGatewayProxyResponse{
+				StatusCode: 500,
+				Body:       `{"error":"Failed to query: ` + err.Error() + `"}`,
+			}, nil
 		}
 
 		sort.Slice(out.Items, func(i, j int) bool {
@@ -81,9 +91,14 @@ func handler(ctx context.Context, req events.APIGatewayProxyRequest) (events.API
 			})
 		}
 	} else {
-		allRepos, err := client.Scan(ctx, &ddb.ScanInput{TableName: aws.String("pytori_repos")})
+		allRepos, err := client.Scan(ctx, &ddb.ScanInput{
+			TableName: aws.String("pytori_repos"),
+		})
 		if err != nil {
-			return events.APIGatewayProxyResponse{StatusCode: 500, Body: `{"error":"Failed to scan repos"}`}, nil
+			return events.APIGatewayProxyResponse{
+				StatusCode: 500,
+				Body:       `{"error":"Failed to scan repos"}`,
+			}, nil
 		}
 
 		for _, repo := range allRepos.Items {
@@ -93,12 +108,16 @@ func handler(ctx context.Context, req events.APIGatewayProxyRequest) (events.API
 			out, err := client.Query(ctx, &ddb.QueryInput{
 				TableName:              aws.String("ShiritoriMergedWords"),
 				IndexName:              aws.String("repository_name-index"),
-				KeyConditionExpression: aws.String("repository_name = :name"),
+				KeyConditionExpression: aws.String("#rname = :name"),
+				ExpressionAttributeNames: map[string]string{
+					"#rname": "repository_name",
+				},
 				ExpressionAttributeValues: map[string]types.AttributeValue{
 					":name": &types.AttributeValueMemberS{Value: repoName},
 				},
 			})
 			if err != nil {
+				log.Printf("query failed for repo %s: %v", repoName, err)
 				continue
 			}
 
@@ -117,8 +136,15 @@ func handler(ctx context.Context, req events.APIGatewayProxyRequest) (events.API
 		}
 	}
 
+	if summaries == nil {
+		summaries = []RepoSummary{}
+	}
+
 	body, _ := json.Marshal(summaries)
-	return events.APIGatewayProxyResponse{StatusCode: 200, Body: string(body)}, nil
+	return events.APIGatewayProxyResponse{
+		StatusCode: 200,
+		Body:       string(body),
+	}, nil
 }
 
 func main() {
