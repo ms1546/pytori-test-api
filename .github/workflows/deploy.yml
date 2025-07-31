@@ -12,15 +12,11 @@ jobs:
       - name: Checkout source
         uses: actions/checkout@v4
 
-      - name: Set up Go
-        uses: actions/setup-go@v5
-        with:
-          go-version: "1.22"
-
-      - name: Build Go binary for Lambda (Amazon Linux 2)
+      - name: Build Go binary on Amazon Linux 2 (Lambda Compatible)
         run: |
-          docker run --rm -v ${{ github.workspace }}:/go/src/app -w /go/src/app amazonlinux:2 bash -c "\
-            yum install -y gcc golang zip && \
+          docker run --rm -v ${{ github.workspace }}:/app -w /app amazonlinux:2 bash -c "\
+            yum install -y golang gcc zip && \
+            go version && \
             GOOS=linux GOARCH=amd64 go build -o main cmd/repo-summary/main.go && \
             zip function.zip main"
 
